@@ -1,0 +1,647 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "description" : "This API provided by Middleware integrated with in house Loyalty Service hosted on AWS VPC. The current functionality is limited for usage with POS and supports operations as below:\n\na. Customer Profile: Get the Loyalty Profile for the enrolled Customer, that shows the basic personal information, Loyalty Points earned, Tier and Rewards available for the customer.\n\nb. Redeem the Rewards: If the customers wants to redeem the points accrued, the only have option to Pay with Points or Purchase a Gift Card using the Points",
+    "version" : "1.0.0",
+    "title" : "Middleware-Loyalty-API",
+    "contact" : {
+      "name" : "HBC Middleware",
+      "email" : "middlewaredevelopment@hbc.com"
+    }
+  },
+  "host" : "localhost",
+  "basePath" : "/mw/services/loyalty",
+  "schemes" : [ "http" ],
+  "consumes" : [ "application/json" ],
+  "produces" : [ "application/json" ],
+  "paths" : {
+    "/profiles" : {
+      "post" : {
+        "summary" : "Retrieves Loyalty Profile for the customer",
+        "description" : "This resource is used to get all the basic Customer Information along with details related to Points and Tier tagged to the Loyalty Profile of the customer.",
+        "operationId" : "getAccounts",
+        "consumes" : [ ],
+        "parameters" : [ {
+          "name" : "body",
+          "in" : "body",
+          "required" : true,
+          "schema" : {
+            "type" : "object",
+            "required" : [ "BannerCode", "Id", "IdType" ],
+            "properties" : {
+              "Id" : {
+                "type" : "string",
+                "example" : "LoyaltyID: 52f7feec-90f2-4aa8-bfbe-22f75cb49c28",
+                "description" : "Identifier of UUID Type"
+              },
+              "IdType" : {
+                "type" : "string",
+                "description" : "The following ID types are compatible: \nBlueMartiniID: The unique ID that would be generated from Web Tier applications TokenizedCCNum: The TN/PLCC Credit Card that is tokenized \nUCID: A Customer ID created uniquely in UCID database \nLoyaltyID: The unique Loyalty ID used by Loyalty service",
+                "enum" : [ "BlueMartiniID", "TokenizedCCNum", "UCID", "LoyaltyID" ]
+              },
+              "BannerCode" : {
+                "type" : "string",
+                "description" : "This would retrieve the Loyalty Profile corresponding to the Banner. If this is not provided then all matching entries across Banners for the Identifier will be returned",
+                "enum" : [ "BAY", "LT", "SAKS", "OFF5", "HMO" ]
+              },
+              "TransactionAmount" : {
+                "required" : [ "Amount", "CurrencyCode" ],
+                "type" : "object",
+                "description" : "Cart Total after all the Discounts are applied.",
+                "properties" : {
+                  "Amount" : {
+                    "type" : "number",
+                    "description" : "The Total Amount"
+                  },
+                  "CurrencyCode" : {
+                    "type" : "string",
+                    "enum" : [ "USD", "CAD" ]
+                  }
+                }
+              }
+            }
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "200 response",
+            "schema" : {
+              "$ref" : "#/definitions/Profile"
+            }
+          },
+          "404" : {
+            "description" : "404 response"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Update Loyalty Profile for the customer",
+        "description" : "This resource is used for updating the Customer Profile including any updates to the Loyalty Terms and Conditions Flag. If there is any change needed for updating an Cross Referencing Id, like changing the mapped TokenizedCCNum to an existing LoyaltyID then this endpoint should be not be used. This is only for updating any Personal Information of the Loyalty Customer. The changes to the Cross Refernece is maintained externally between UCID and Loyalty Service",
+        "operationId" : "updateProfile",
+        "consumes" : [ ],
+        "parameters" : [ {
+          "name" : "body",
+          "in" : "body",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/ProfileForm"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "This indicates that Profile Update was successful.",
+            "schema" : {
+              "$ref" : "#/definitions/Profile"
+            }
+          },
+          "409" : {
+            "description" : "409 response"
+          }
+        }
+      },
+      "x-restlet" : {
+        "section" : "Loyalty Profile Info"
+      }
+    },
+    "/redemption" : {
+      "post" : {
+        "summary" : "Loyalty Points Redemption",
+        "description" : "Create a request to Redeem Rewards. ",
+        "operationId" : "redeemReward",
+        "consumes" : [ ],
+        "parameters" : [ {
+          "name" : "body",
+          "in" : "body",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/RedemptionForm"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Status 200",
+            "schema" : {
+              "$ref" : "#/definitions/Redemption"
+            }
+          }
+        }
+      },
+      "x-restlet" : {
+        "section" : "Loyalty Redemption"
+      }
+    }
+  },
+  "definitions" : {
+    "Profile" : {
+      "type" : "object",
+      "required" : [ "BannerCode", "Created_at", "CustomerInfo", "Entrytype", "Identifiers", "LastUpdatedTime", "Status", "Type" ],
+      "properties" : {
+        "Entrytype" : {
+          "type" : "string",
+          "example" : "CapitalOne_POS",
+          "description" : "Identifies  the origin of transaction. This can be STORE, ONLINE or profile created from CAPONE Feed"
+        },
+        "BannerCode" : {
+          "type" : "string",
+          "description" : "Placeholder for identifying the HBC Banner Codes",
+          "enum" : [ "BAY", "SAKS", "OFF5", "LT", "HMO" ]
+        },
+        "Status" : {
+          "type" : "string",
+          "example" : "active",
+          "description" : "Account status to reflect status at Epsilon. Must agree to T&C to go from inactive to active.",
+          "enum" : [ "inactive", "active", "deleted" ]
+        },
+        "isT&C" : {
+          "type" : "boolean",
+          "description" : "Terms and Conditions accepted by this customer?"
+        },
+        "Type" : {
+          "type" : "string",
+          "example" : "plcc",
+          "description" : "Indicator for the type of the program. Transactional (plcc), TenderNeutral, etc.",
+          "enum" : [ "plcc" ]
+        },
+        "CustomerInfo" : {
+          "$ref" : "#/definitions/PersonalInfo"
+        },
+        "Identifiers" : {
+          "type" : "array",
+          "example" : "Identifiers\n{\n  \"id\":\"52f7feec-90f2-4aa8-bfbe-22f75cb49c28\",\n  \"Type\":\"LoyaltyID\"\n}",
+          "description" : "This can be an array of identifiers corresponding to the input/request identifier. This cross reference of mutiple identifiers maintained in the Loyalty Service System of Records.",
+          "items" : {
+            "type" : "object",
+            "description" : "Singleton Object containing ID and IDType. While ID refers to the matching ID from Loyalty service, the IDType refers to the classification of ID to which this belong. The ID can one of Loyalty ID, TokenizedCCNum, BlueMartini ID or UCID",
+            "properties" : {
+              "Id" : {
+                "type" : "string",
+                "description" : "Identifier which can be of UUID or custom type. This would be mostly a String Datatype"
+              },
+              "IdType" : {
+                "type" : "string",
+                "description" : "The following ID types are compatible: \nLoyaltyID: The unique Loyalty ID used by Loyalty service\nBlueMartiniID: The unique ID that would be generated from Web Tier applications \nTokenizedCCNum: The TN/PLCC Credit Card that is tokenized \nUCID: A Customer ID created uniquely in UCID database",
+                "enum" : [ "LoyaltyID", "UCID", "BlueMartiniID", "TokenizedCCNum" ]
+              }
+            },
+            "example" : "Identifier\n{\n  \"id\":\"52f7feec-90f2-4aa8-bfbe-22f75cb49c28\",\n  \"Type\":\"LoyaltyID\"\n},\nIdentifier\n{\n  \"id\":\"b9b05717-e4cc-428a-9a51-f0857c151d8e\",\n  \"Type\":\"UCID\"\n},\nIdentifier\n{\n  \"id\":\"9906026020000044540522\",\n  \"Type\":\"TokenizedCCNum\"\n},\nIdentifier\n{\n  \"id\":\"74f9173d-a181-4421-bb02-4b0e78cf4432\",\n  \"Type\":\"BlueMartiniID\"\n},"
+          }
+        },
+        "Points" : {
+          "$ref" : "#/definitions/LoyaltyPoints"
+        },
+        "Tier" : {
+          "$ref" : "#/definitions/LoyaltyTier"
+        },
+        "LastUpdatedTime" : {
+          "type" : "string",
+          "format" : "date-time",
+          "description" : "Timestamp indicating the last time when there was an update to  the customer record in System of Records hosted by Loyalty Service."
+        },
+        "Created_at" : {
+          "type" : "string",
+          "format" : "date-time",
+          "example" : "2017-04-29T11:56:52Z",
+          "description" : "Timestamp indicating the time when there was an entry created to  the customer record in System of Records hosted by Loyalty Service."
+        }
+      },
+      "description" : "**This contains the Loyalty Profile associated with the Account. This would be used on the entry screen for displaying the Loyalty Points, Rewards accrued and the Tier to which the Account is tagged to**",
+      "x-restlet" : {
+        "section" : "Loyalty Profile Info"
+      }
+    },
+    "ProfileForm" : {
+      "type" : "object",
+      "required" : [ "BannerCode", "Identifier", "PersonalInfo", "Type" ],
+      "properties" : {
+        "BannerCode" : {
+          "type" : "string",
+          "description" : "Identifies  the origin of transaction. This can be STORE, ONLINE or profile created from CAPONE Feed",
+          "enum" : [ "BAY", "SAKS", "OFF5", "HMO", "LT" ]
+        },
+        "Type" : {
+          "type" : "string",
+          "example" : "plcc",
+          "description" : "Indicator for the type of the program.  Transactional (plcc), TenderNeutral, etc.",
+          "enum" : [ "plcc" ]
+        },
+        "PersonalInfo" : {
+          "$ref" : "#/definitions/PersonalInfo"
+        },
+        "Identifier" : {
+          "type" : "object",
+          "description" : "This can be one of the parameters that can be used for lookup of the Loyalty Profile. The data structure here is Singleton Object containing ID and IDType. While ID refers to the matching ID from Loyalty service, the IDType refers to the   classification of ID to which this belong. The ID can one of Loyalty ID, TokenizedCCNum, BlueMartini ID or UCID",
+          "properties" : {
+            "Id" : {
+              "type" : "string",
+              "description" : "Identifier which can be of UUID or custom type. This would be mostly a String Datatype"
+            },
+            "IdType" : {
+              "type" : "string",
+              "description" : "The following ID types are compatible: \nLoyaltyID: The unique Loyalty ID used by Loyalty service\nBlueMartiniID: The unique ID that would be generated from Web Tier applications \nTokenizedCCNum: The TN/PLCC Credit Card that is tokenized \nUCID: A Customer ID created uniquely in UCID database",
+              "enum" : [ "LoyaltyID", "UCID", "BlueMartiniID", "TokenizedCCNum" ]
+            }
+          },
+          "example" : "Identifier\n{\n  \"id\":\"52f7feec-90f2-4aa8-bfbe-22f75cb49c28\",\n  \"Type\":\"LoyaltyID\"\n} \nOR\nIdentifier\n{\n  \"id\":\"b9b05717-e4cc-428a-9a51-f0857c151d8e\",\n  \"Type\":\"UCID\"\n}\nOR\nIdentifier\n{\n  \"id\":\"9906026020000044540522\",\n  \"Type\":\"TokenizedCCNum\"\n}\nOR\nIdentifier\n{\n  \"id\":\"74f9173d-a181-4421-bb02-4b0e78cf4432\",\n  \"Type\":\"BlueMartiniID\"\n},"
+        },
+        "legal_agreement" : {
+          "type" : "string",
+          "example" : "accepted",
+          "description" : "Shows whether user accepted or declined terms and conditions."
+        }
+      },
+      "x-restlet" : {
+        "section" : "Loyalty Profile Info"
+      }
+    },
+    "RedemptionForm" : {
+      "type" : "object",
+      "required" : [ "AmountToRedeem", "Id", "PointsToRedeem", "RewardType" ],
+      "properties" : {
+        "Id" : {
+          "type" : "string",
+          "description" : "The LoyaltyID stored in the Loyalty Service. This is the key identifier for all further transactions."
+        },
+        "RewardType" : {
+          "type" : "string",
+          "description" : "Type of the Rewards available. The customer will be allowed to either Pay with Points or Purchase a Gift Card.\n\nIn case of Pay with Points, the Points and Amount to Redeem should be sent in the request. \nIn case of Purchase a Gift Card additionally, the Gift Card Number and PIN activated with the Amount should be sent during Redemption. This will then deduct those points from Loyalty Service. \nPoints and Amount to Redeem should be sent in any case\n\nVGC- Pay with Points\nGC - Purchase Gift Card",
+          "enum" : [ "VGC", "GC" ]
+        },
+        "PointsToRedeem" : {
+          "type" : "integer",
+          "description" : "Reward points that needs to be redeemed",
+          "example" : 1000
+        },
+        "AmountToRedeem" : {
+          "required" : [ "Amount", "CurrencyCode" ],
+          "type" : "object",
+          "description" : "Monetary Value that needs to be redeemed",
+          "properties" : {
+            "Amount" : {
+              "type" : "number",
+              "description" : "The Amount for Redemption"
+            },
+            "CurrencyCode" : {
+              "type" : "string",
+              "description" : "Currency Code for the Amount",
+              "enum" : [ "USD", "CAD" ]
+            }
+          },
+          "example" : "25"
+        },
+        "GiftCard" : {
+          "$ref" : "#/definitions/GiftCard"
+        }
+      },
+      "x-restlet" : {
+        "section" : "Loyalty Redemption"
+      }
+    },
+    "Redemption" : {
+      "type" : "object",
+      "properties" : {
+        "Id" : {
+          "type" : "string",
+          "description" : "The LoyaltyID stored in the Loyalty Service. This is the key identifier for all further transactions."
+        },
+        "RewardId" : {
+          "type" : "string",
+          "description" : "Unique Id for the Reward Value."
+        },
+        "TransactionId" : {
+          "type" : "string",
+          "description" : "Reference ID for the specific transaction that indicates the redemption. To be used for clawback and audit."
+        },
+        "RewardName" : {
+          "type" : "string",
+          "example" : "Welcome Reward",
+          "description" : "Name of the Reward Value Gift Card"
+        },
+        "RewardType" : {
+          "type" : "string",
+          "example" : "Loyalty E-Gift Card",
+          "description" : "Type of the Rewards available. This is currently restricted to GiftCard Only"
+        },
+        "RedeemedValue" : {
+          "$ref" : "#/definitions/GiftCard"
+        },
+        "ExpirationDate" : {
+          "type" : "string",
+          "format" : "date-time",
+          "example" : "2017-04-29T11:56:52Z",
+          "description" : "Expiration date of the reward"
+        },
+        "RedemptionDate" : {
+          "type" : "string",
+          "format" : "date-time",
+          "example" : "2017-04-29T11:56:52Z",
+          "description" : "Redemption date of the reward."
+        },
+        "PointsUsed" : {
+          "type" : "integer",
+          "description" : "Loyalty points used to redeem the gift card",
+          "example" : 10000
+        }
+      },
+      "x-restlet" : {
+        "section" : "Loyalty Redemption"
+      }
+    },
+    "PersonalInfo" : {
+      "type" : "object",
+      "required" : [ "Address", "Birthdate", "Contact", "FirstName", "LastName" ],
+      "properties" : {
+        "FirstName" : {
+          "type" : "string",
+          "example" : "Pierre",
+          "description" : "Placeholder for holding the Customer First Name"
+        },
+        "MiddleName" : {
+          "type" : "string",
+          "example" : "Esprit",
+          "description" : "Placeholder for holding the Customer Middle Name"
+        },
+        "LastName" : {
+          "type" : "string",
+          "example" : "Radisson",
+          "description" : "Placeholder for holding the Customer Last Name"
+        },
+        "Prefix" : {
+          "type" : "string",
+          "example" : "Mr/Mrs.",
+          "description" : "Placeholder for holding the Salutaiton or the Prefix"
+        },
+        "Suffix" : {
+          "type" : "string",
+          "example" : "Sr/Jr.",
+          "description" : "Placeholder for holding the Suffix"
+        },
+        "Birthdate" : {
+          "type" : "string",
+          "format" : "date",
+          "description" : "Birthday information of the customer in ISO 8601 format.  To be used to market or segment.  The system of record may be external; It may differ from loyalty provider (e.g. UCID, .com, etc)",
+          "example" : "2014-04-29"
+        },
+        "Contact" : {
+          "type" : "object",
+          "description" : "Email, Phone Details of the Customer",
+          "properties" : {
+            "Phone" : {
+              "type" : "object",
+              "description" : "Customer's Phone Number. This could be the Home/Mobile or Other Phone as per the preference of the customer",
+              "properties" : {
+                "PhoneType" : {
+                  "type" : "string",
+                  "example" : "Sr/Jr.",
+                  "description" : "This would indicate the Phone Type provided. This could help in fetching customer's record in case with multiple options",
+                  "enum" : [ "Home", "Mobile", "Other" ]
+                },
+                "PhoneNumber" : {
+                  "type" : "string",
+                  "example" : "+1-213-456-7890.",
+                  "description" : "Customer Phone Number"
+                },
+                "Preferences" : {
+                  "type" : "object",
+                  "description" : "Preference when the customers wants to be reached",
+                  "properties" : {
+                    "Schedule" : {
+                      "type" : "string",
+                      "example" : "Day",
+                      "description" : "Schedule during the day. Could be Day,Evening"
+                    },
+                    "Hours" : {
+                      "type" : "string",
+                      "example" : "9AM-12PM",
+                      "description" : "Hours Range during when the customers wants to be reached"
+                    }
+                  }
+                }
+              }
+            },
+            "Email" : {
+              "type" : "object",
+              "description" : "Placeholder for holding the Customer Email Address and Opt In",
+              "properties" : {
+                "Email" : {
+                  "type" : "string",
+                  "example" : "abc@xyz.com",
+                  "description" : "Email address for the Customer"
+                },
+                "EmailOptIn" : {
+                  "type" : "boolean",
+                  "description" : "Flag to indicate to Opt In for receiving email updates, Promitions etc.",
+                  "example" : false
+                }
+              }
+            }
+          }
+        },
+        "Address" : {
+          "required" : [ "city", "line_1", "zip_code" ],
+          "type" : "object",
+          "description" : "Mailing Address associated with the Loyalty Account -- PLCC",
+          "properties" : {
+            "line_1" : {
+              "type" : "string",
+              "example" : "123 Sesame St"
+            },
+            "line_2" : {
+              "type" : "string",
+              "example" : "Floor 2"
+            },
+            "city" : {
+              "type" : "string",
+              "example" : "New York"
+            },
+            "zip_code" : {
+              "type" : "string",
+              "example" : "11355"
+            },
+            "state" : {
+              "type" : "string",
+              "example" : "NY"
+            },
+            "country" : {
+              "type" : "string",
+              "example" : "USA"
+            }
+          }
+        }
+      },
+      "description" : "Personal Information of the Loyalty Customer",
+      "x-restlet" : {
+        "section" : "Common Models"
+      }
+    },
+    "LoyaltyTier" : {
+      "type" : "object",
+      "properties" : {
+        "CurrentTier" : {
+          "type" : "string",
+          "example" : "PLATINUM",
+          "description" : "The Current Tier. The Tier Type and codes still needs to be determined but this will be the placeholder that hosts this information"
+        },
+        "NextTier" : {
+          "type" : "string",
+          "description" : "The next tier to which the customer will be upgraded based on the points he accrues"
+        },
+        "PointsForNextTier" : {
+          "type" : "integer",
+          "description" : "Determines the Point for Next Tier"
+        }
+      },
+      "description" : "**The Tier to which the customer is entitled. This information may be upgraded/downgraded based on the Spend and Earn of the Points through transactions.  Each PLCC customer will be holding the base tier as awarded by the PLCC and then will be maitained by the Loyalty Service**",
+      "x-restlet" : {
+        "section" : "Common Models"
+      }
+    },
+    "LoyaltyPoints" : {
+      "type" : "object",
+      "properties" : {
+        "CurrentPoints" : {
+          "type" : "array",
+          "description" : "Current Point Balance (BASE/BONUS).",
+          "items" : {
+            "type" : "object",
+            "description" : "Loyalty Point",
+            "properties" : {
+              "Type" : {
+                "type" : "string",
+                "example" : "BASE",
+                "enum" : [ "BASE", "BONUS" ]
+              },
+              "PointsBalance" : {
+                "type" : "integer",
+                "description" : "Points that is available",
+                "example" : 450
+              },
+              "PointsValue" : {
+                "type" : "object",
+                "description" : "Determines the current monetary value on the Points accrued",
+                "properties" : {
+                  "Amount" : {
+                    "type" : "number",
+                    "description" : "The Card Amount"
+                  },
+                  "CurrencyCode" : {
+                    "type" : "string",
+                    "description" : "Currency Code to identify the Amount",
+                    "enum" : [ "USD", "CAD" ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "RedeemablePoints" : {
+          "type" : "object",
+          "description" : "Points and Point Values that can be redeemed",
+          "properties" : {
+            "PointsBalance" : {
+              "type" : "integer",
+              "description" : "Points that can be redeemed"
+            },
+            "PointsValue" : {
+              "required" : [ "Amount", "CurrencyCode" ],
+              "type" : "object",
+              "description" : "Determines the current monetary value on the Points Redeemable",
+              "properties" : {
+                "Amount" : {
+                  "type" : "number",
+                  "description" : "The Redeemable Amount"
+                },
+                "CurrencyCode" : {
+                  "type" : "string",
+                  "description" : "Currency Code to identify the Amount",
+                  "enum" : [ "USD", "CAD" ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "description" : "This section contains the Points Info. This could be returned/used by other resources defined in this service",
+      "x-restlet" : {
+        "section" : "Common Models"
+      }
+    },
+    "Product" : {
+      "type" : "object",
+      "required" : [ "GrossValue", "Id", "IdType", "LineNumber", "NetValue", "Quantity" ],
+      "properties" : {
+        "Id" : {
+          "type" : "string",
+          "description" : "Product id which can be upc, skn, etc."
+        },
+        "IdType" : {
+          "type" : "string",
+          "description" : "Product id type: UPC, SKN, Custom."
+        },
+        "GrossValue" : {
+          "type" : "number",
+          "format" : "float",
+          "description" : "Price multiplied by quantity with no discounts applied."
+        },
+        "NetValue" : {
+          "type" : "number",
+          "format" : "float",
+          "description" : "Price actually paid multiplied by quantity with discounts applied."
+        },
+        "Quantity" : {
+          "type" : "integer",
+          "format" : "int32",
+          "description" : "Quantity of this product being purchased."
+        },
+        "LineNumber" : {
+          "type" : "integer",
+          "format" : "int32",
+          "description" : "Line item sequence number."
+        }
+      },
+      "description" : "Product model.",
+      "x-restlet" : {
+        "section" : "Common Models"
+      }
+    },
+    "GiftCard" : {
+      "type" : "object",
+      "required" : [ "Amount", "CurrencyCode" ],
+      "properties" : {
+        "GiftCardNumber" : {
+          "type" : "string",
+          "description" : "The Plain Text Gift Card Number (16 digit card number). This may not be sent during retrieval of Rewards however this will be available after the Redemption has been processed.",
+          "minLength" : 16,
+          "maxLength" : 16
+        },
+        "Pin" : {
+          "type" : "integer",
+          "description" : "GC Pin"
+        },
+        "Amount" : {
+          "type" : "number",
+          "description" : "The Gift Card Balance available for Redemption"
+        },
+        "CurrencyCode" : {
+          "type" : "string",
+          "description" : "Determines the Currency Code",
+          "enum" : [ "USD", "CAD" ]
+        }
+      },
+      "description" : "Placeholder for the Gift Card Information",
+      "x-restlet" : {
+        "section" : "Common Models"
+      }
+    }
+  },
+  "x-restlet" : {
+    "sections" : {
+      "Loyalty Profile Info" : {
+        "description" : "# Collection of resources for managing Loyalty Profile associated with the Account"
+      },
+      "Loyalty Redemption" : {
+        "description" : "# Collection of Resources for Redemption of Loyalty Points"
+      },
+      "Common Models" : { }
+    }
+  }
+}
